@@ -1796,7 +1796,7 @@ function renderSettings(){
         <input id="new-profile-name" placeholder="Name" autocomplete="off"
           style="width:100%;background:var(--s2);border:none;border-radius:10px;padding:12px 14px;color:var(--t1);font-size:15px;font-family:inherit;margin-bottom:12px;outline:none"/>
         <div id="admin-color-picker" style="display:flex;gap:10px;margin-bottom:14px">
-          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===1?' selected':''}" style="background:${c};${i===1?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickColor('_adminAddColor','${c}','admin-color-picker',this)"></div>`).join('')}
+          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===1?' selected':''}" style="background:${c};${i===1?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickAdminColor('${c}',this)"></div>`).join('')}
         </div>
         <button onclick="addProfile()"
           style="width:100%;background:var(--accent);border:none;color:#fff;padding:13px;border-radius:12px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">
@@ -1950,7 +1950,7 @@ async function showProfileScreen(){
         <input id="setup-name" placeholder="Your name" autocomplete="off"
           style="width:100%;background:var(--s2);border:none;border-radius:12px;padding:14px 16px;color:var(--t1);font-size:16px;font-family:inherit;margin-bottom:14px;outline:none"/>
         <div id="setup-colors" style="display:flex;gap:10px;justify-content:center;margin-bottom:14px">
-          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===0?' selected':''}" style="background:${c};${i===0?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickColor('_setupColor','${c}','setup-colors',this)"></div>`).join('')}
+          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===0?' selected':''}" style="background:${c};${i===0?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickSetupColor('${c}',this)"></div>`).join('')}
         </div>
         <input id="setup-pin" placeholder="Choose a 4-digit PIN" type="password" maxlength="4" inputmode="numeric"
           style="width:100%;background:var(--s2);border:none;border-radius:12px;padding:14px 16px;color:var(--t1);font-size:22px;font-family:inherit;margin-bottom:20px;outline:none;text-align:center;letter-spacing:0.3em"/>
@@ -1972,11 +1972,12 @@ async function showProfileScreen(){
   }
 }
 
-function pickColor(varName,color,containerId,el){
-  window[varName]=color;
+function pickColor(containerId,color,el){
   document.querySelectorAll(`#${containerId} .color-swatch`).forEach(s=>{s.classList.remove('selected');s.style.boxShadow='';});
   el.classList.add('selected');el.style.boxShadow=`0 0 0 2px var(--bg),0 0 0 4px ${color}`;
 }
+function pickSetupColor(color,el){_setupColor=color;pickColor('setup-colors',color,el);}
+function pickAdminColor(color,el){_adminAddColor=color;pickColor('admin-color-picker',color,el);}
 
 async function createAdminProfile(){
   const name=(document.getElementById('setup-name').value||'').trim();
