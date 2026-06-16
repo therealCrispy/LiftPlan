@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="LiftPlan"/>
 <title>LiftPlan</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root{
   --bg:#1c1917;--s0:#262420;--s1:#262420;--s2:#302e2a;--s3:#3d3a36;
@@ -32,6 +33,27 @@ html,body{height:100%;background:var(--bg);color:var(--t1);
   font-family:-apple-system,'Helvetica Neue',sans-serif;
   overscroll-behavior:none;touch-action:manipulation}
 
+/* ── PROFILE SELECTOR ── */
+.profile-card{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
+  padding:14px 18px;border-radius:18px;transition:background 0.15s;-webkit-tap-highlight-color:transparent}
+.profile-card:active{background:var(--s2)}
+.profile-avatar{width:88px;height:88px;border-radius:20px;display:flex;align-items:center;
+  justify-content:center;font-size:36px;font-weight:800;color:#fff}
+.profile-name{font-size:14px;font-weight:600;color:var(--t1)}
+.profile-admin-badge{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
+.color-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;
+  transition:transform 0.15s;border:2px solid transparent;flex-shrink:0}
+.color-swatch.selected{transform:scale(1.25)}
+/* ── PIN PAD ── */
+#pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:260px;margin-top:20px}
+.pin-btn{height:76px;background:var(--s2);border:none;border-radius:20px;font-size:26px;font-weight:600;
+  color:var(--t1);cursor:pointer;font-family:inherit;transition:background 0.1s,transform 0.1s}
+.pin-btn:active{background:var(--s3);transform:scale(0.93)}
+.pin-btn.pin-util{font-size:20px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--t3);transition:all 0.15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+#pin-dots.shake{animation:shake 0.42s ease}
 /* ── TAB BAR ── */
 #tab-bar{position:fixed;bottom:0;left:0;right:0;
   height:calc(var(--tab) + var(--safe-bot));padding-bottom:var(--safe-bot);
@@ -495,6 +517,38 @@ canvas.pr-chart{width:100%;height:80px;display:block}
   </div>
 </div>
 
+<!-- PROFILE SELECTOR -->
+<div id="profile-screen" style="display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:200;padding:calc(var(--safe-top)+20px) 24px calc(var(--safe-bot)+20px)">
+  <div style="font-size:34px;font-weight:900;letter-spacing:-1px;margin-bottom:6px">LiftPlan</div>
+  <div style="font-size:15px;color:var(--t3);margin-bottom:52px">Who's working out?</div>
+  <div id="profile-grid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:100%;max-width:380px"></div>
+</div>
+
+<!-- PIN PAD -->
+<div id="pin-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:201;padding:20px">
+  <button onclick="closePinPad()" style="position:absolute;top:calc(var(--safe-top)+14px);left:16px;background:none;border:none;color:var(--t3);font-size:15px;cursor:pointer;padding:8px;font-family:inherit">← Back</button>
+  <div id="pin-profile-name" style="font-size:24px;font-weight:700;margin-bottom:4px"></div>
+  <div style="font-size:14px;color:var(--t3);margin-bottom:38px">Enter your PIN</div>
+  <div id="pin-dots" style="display:flex;gap:18px;margin-bottom:10px">
+    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div id="pin-error-msg" style="font-size:13px;color:var(--red);height:18px;margin-bottom:4px;opacity:0;transition:opacity 0.2s">Incorrect PIN</div>
+  <div id="pin-grid">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn pin-util" onclick="pinBack()">⌫</button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn pin-util" onclick="verifyPin()">↵</button>
+  </div>
+</div>
+
 <!-- TAB BAR -->
 <nav id="tab-bar">
   <button class="tab" data-sec="sec-log" onclick="showSection('sec-log')">
@@ -520,7 +574,7 @@ canvas.pr-chart{width:100%;height:80px;display:block}
 </nav>
 
 <div id="toast"></div>
-<div id="version-corner" style="position:fixed;bottom:calc(var(--tab) + var(--safe-bot) + 6px);left:10px;font-size:10px;color:var(--t4);z-index:99;pointer-events:none;letter-spacing:0.03em">v1.1</div>
+<div id="version-corner" style="position:fixed;bottom:calc(var(--tab) + var(--safe-bot) + 6px);left:10px;font-size:10px;color:var(--t4);z-index:99;pointer-events:none;letter-spacing:0.03em">v1.2</div>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -776,8 +830,10 @@ function parseReps(str){
 // ══════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════
-function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function nsKey(k){const pid=localStorage.getItem('lp_pid');return pid?`${k}_${pid}`:k}
+function lsGet(k,d){try{const v=localStorage.getItem(nsKey(k));return v?JSON.parse(v):d}catch{return d}}
+function lsSet(k,v){try{localStorage.setItem(nsKey(k),JSON.stringify(v))}catch{}}
+function lsClear(k){try{localStorage.removeItem(nsKey(k))}catch{}}
 function d0(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
 function sameDay(a,b){return d0(a).getTime()===d0(b).getTime()}
 
@@ -1728,7 +1784,43 @@ function renderSettings(){
   const progPct=typeof cw==='number'?Math.round((cw/12)*100):0;
   const blDate=bl?.date?fmtFull(new Date(bl.date)):'Not set';
   const maxes=bl?.maxes||{};
+  const p=currentProfile||{};
+  const adminPanel=p.is_admin?`
+    <div class="settings-sec">
+      <div class="settings-lbl">Manage Profiles</div>
+      <div class="settings-card" id="admin-profiles-list">
+        <div style="padding:12px 0;color:var(--t3);font-size:14px">Loading…</div>
+      </div>
+      <div class="settings-card" style="margin-top:10px;padding:14px 16px">
+        <div style="font-size:11px;color:var(--t3);font-weight:700;letter-spacing:0.07em;margin-bottom:12px">ADD PROFILE</div>
+        <input id="new-profile-name" placeholder="Name" autocomplete="off"
+          style="width:100%;background:var(--s2);border:none;border-radius:10px;padding:12px 14px;color:var(--t1);font-size:15px;font-family:inherit;margin-bottom:12px;outline:none"/>
+        <div id="admin-color-picker" style="display:flex;gap:10px;margin-bottom:14px">
+          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===1?' selected':''}" style="background:${c};${i===1?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickColor('_adminAddColor','${c}','admin-color-picker',this)"></div>`).join('')}
+        </div>
+        <button onclick="addProfile()"
+          style="width:100%;background:var(--accent);border:none;color:#fff;padding:13px;border-radius:12px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">
+          Add Profile
+        </button>
+      </div>
+    </div>`:'';
   document.getElementById('settings-body').innerHTML=`
+    <div class="settings-sec">
+      <div class="settings-lbl">Account</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:42px;height:42px;border-radius:10px;background:${p.color||'var(--accent)'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff;flex-shrink:0">${(p.name||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-size:16px;font-weight:600">${p.name||'Unknown'}</div>
+              <div style="font-size:12px;color:var(--t3)">${p.is_admin?'Admin':'Member'}</div>
+            </div>
+          </div>
+          <button onclick="switchProfile()" style="background:var(--s2);border:none;color:var(--t2);padding:9px 16px;border-radius:10px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap">Switch</button>
+        </div>
+      </div>
+    </div>
+    ${adminPanel}
     <div class="settings-sec">
       <div class="settings-lbl">Current Status</div>
       <div class="settings-card">
@@ -1783,10 +1875,11 @@ function renderSettings(){
         </div>
         <div class="settings-row">
           <div class="settings-row-label">Version</div>
-          <div id="version-badge" class="settings-row-val">v1.0</div>
+          <div id="version-badge" class="settings-row-val">v1.2</div>
         </div>
       </div>
     </div>`;
+  if(p.is_admin)renderAdminProfiles();
 }
 function resetBaseline(){if(confirm('Re-test your baseline? This will open the wizard again.')){openBaseline();}}
 function exportLogs(){
@@ -1802,25 +1895,196 @@ function deleteProgress(name){
 }
 function resetEverything(){
   if(confirm('Reset everything? This clears your maxes and all logs — the app will return to the "Find Your Baseline" state.')){
-    localStorage.removeItem('wbaseline');localStorage.removeItem('wlogs');
+    lsClear('wbaseline');lsClear('wlogs');
     renderCalendar();renderSettings();renderLog();renderProgress();showToast('Reset complete');
     showSection('sec-calendar');
   }
 }
 function clearAll(){
   if(confirm('Clear ALL data including baseline and logs? Cannot be undone.')){
-    localStorage.removeItem('wbaseline');localStorage.removeItem('wlogs');
+    lsClear('wbaseline');lsClear('wlogs');
     renderCalendar();renderSettings();showToast('All data cleared');
   }
 }
 
 // ══════════════════════════════════════════════════════
+// SUPABASE + PROFILES
+// ══════════════════════════════════════════════════════
+const SUPA_URL='https://xlbhtzywwltdicsyhdxa.supabase.co';
+const SUPA_KEY='sb_publishable_sKlf4S-BNRXE7SdLGfIBAg_o-BcN7LO';
+let sb;
+try{sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){sb=null;}
+
+const PROFILE_COLORS=['#c96442','#4a90d9','#3a9e6e','#9b5de5','#c9a442','#e5657d','#5a95ff','#ff8c42'];
+let currentProfile=null;
+let _setupColor=PROFILE_COLORS[0];
+let _adminAddColor=PROFILE_COLORS[1];
+let _pinTarget=null,_pinEntered='';
+let _appInitialized=false;
+
+async function initProfiles(){
+  const pid=localStorage.getItem('lp_pid');
+  if(pid){
+    currentProfile={id:pid,name:localStorage.getItem('lp_name')||'',
+      color:localStorage.getItem('lp_color')||PROFILE_COLORS[0],
+      is_admin:localStorage.getItem('lp_admin')==='1'};
+    startApp();return;
+  }
+  await showProfileScreen();
+}
+
+async function showProfileScreen(){
+  document.getElementById('profile-screen').style.display='flex';
+  document.getElementById('tab-bar').style.display='none';
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  const grid=document.getElementById('profile-grid');
+  grid.innerHTML='<div style="color:var(--t3);font-size:14px">Loading…</div>';
+  try{
+    const{data:profiles,error}=await sb.from('liftplan_profiles').select('*').order('created_at');
+    if(error)throw error;
+    if(!profiles||profiles.length===0){
+      _setupColor=PROFILE_COLORS[0];
+      grid.innerHTML=`<div style="width:100%;max-width:320px;text-align:center">
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;color:var(--t1)">Welcome to LiftPlan</div>
+        <div style="font-size:14px;color:var(--t3);margin-bottom:28px">Set up your admin account</div>
+        <input id="setup-name" placeholder="Your name" autocomplete="off"
+          style="width:100%;background:var(--s2);border:none;border-radius:12px;padding:14px 16px;color:var(--t1);font-size:16px;font-family:inherit;margin-bottom:14px;outline:none"/>
+        <div id="setup-colors" style="display:flex;gap:10px;justify-content:center;margin-bottom:14px">
+          ${PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===0?' selected':''}" style="background:${c};${i===0?`box-shadow:0 0 0 2px var(--bg),0 0 0 4px ${c}`:''}" onclick="pickColor('_setupColor','${c}','setup-colors',this)"></div>`).join('')}
+        </div>
+        <input id="setup-pin" placeholder="Choose a 4-digit PIN" type="password" maxlength="4" inputmode="numeric"
+          style="width:100%;background:var(--s2);border:none;border-radius:12px;padding:14px 16px;color:var(--t1);font-size:22px;font-family:inherit;margin-bottom:20px;outline:none;text-align:center;letter-spacing:0.3em"/>
+        <button onclick="createAdminProfile()"
+          style="width:100%;background:var(--accent);border:none;color:#fff;padding:16px;border-radius:14px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer">
+          Get Started →
+        </button>
+      </div>`;
+      return;
+    }
+    grid.innerHTML=profiles.map(p=>`
+      <div class="profile-card" onclick="selectProfile('${p.id}','${encodeURIComponent(p.name)}','${p.color}',${p.is_admin},'${p.pin||''}')">
+        <div class="profile-avatar" style="background:${p.color}">${p.name[0].toUpperCase()}</div>
+        <div class="profile-name">${p.name}</div>
+        ${p.is_admin?'<div class="profile-admin-badge">Admin</div>':''}
+      </div>`).join('');
+  }catch(e){
+    grid.innerHTML=`<div style="color:var(--red);font-size:14px;text-align:center">Couldn't load profiles.<br>Check your connection.</div>`;
+  }
+}
+
+function pickColor(varName,color,containerId,el){
+  window[varName]=color;
+  document.querySelectorAll(`#${containerId} .color-swatch`).forEach(s=>{s.classList.remove('selected');s.style.boxShadow='';});
+  el.classList.add('selected');el.style.boxShadow=`0 0 0 2px var(--bg),0 0 0 4px ${color}`;
+}
+
+async function createAdminProfile(){
+  const name=(document.getElementById('setup-name').value||'').trim();
+  const pin=(document.getElementById('setup-pin').value||'').trim();
+  if(!name)return showToast('Enter your name');
+  if(!/^\d{4}$/.test(pin))return showToast('PIN must be 4 digits');
+  try{
+    const{data,error}=await sb.from('liftplan_profiles').insert({name,color:_setupColor,is_admin:true,pin}).select().single();
+    if(error)throw error;
+    loginAs(data.id,data.name,data.color,true);
+  }catch(e){showToast('Setup failed — try again');}
+}
+
+function selectProfile(id,encodedName,color,isAdmin,pin){
+  const name=decodeURIComponent(encodedName);
+  if(isAdmin&&pin){showPinPad(id,name,color,pin);}
+  else{loginAs(id,name,color,false);}
+}
+
+function loginAs(id,name,color,isAdmin){
+  localStorage.setItem('lp_pid',id);localStorage.setItem('lp_name',name);
+  localStorage.setItem('lp_color',color);localStorage.setItem('lp_admin',isAdmin?'1':'0');
+  currentProfile={id,name,color,is_admin:isAdmin};
+  document.getElementById('profile-screen').style.display='none';
+  document.getElementById('pin-overlay').style.display='none';
+  startApp();
+}
+
+function startApp(){
+  document.getElementById('tab-bar').style.display='';
+  selectedWeek=weekNum(new Date())||1;
+  initCalStart();renderCalendar();
+  if(!_appInitialized){setupTabSwipe();_appInitialized=true;}
+  showSection('sec-calendar');
+}
+
+function switchProfile(){
+  ['lp_pid','lp_name','lp_color','lp_admin'].forEach(k=>localStorage.removeItem(k));
+  currentProfile=null;
+  document.getElementById('tab-bar').style.display='none';
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  showProfileScreen();
+}
+
+// ── PIN PAD ──
+function showPinPad(id,name,color,pin){
+  _pinTarget={id,name,color,pin};_pinEntered='';
+  updatePinDots();
+  document.getElementById('pin-profile-name').textContent=name;
+  document.getElementById('pin-error-msg').style.opacity='0';
+  document.getElementById('pin-overlay').style.display='flex';
+}
+function closePinPad(){
+  document.getElementById('pin-overlay').style.display='none';
+  _pinTarget=null;_pinEntered='';
+}
+function pinPress(d){
+  if(!_pinTarget||_pinEntered.length>=4)return;
+  _pinEntered+=d;updatePinDots();
+  if(_pinEntered.length===4)setTimeout(verifyPin,120);
+}
+function pinBack(){_pinEntered=_pinEntered.slice(0,-1);updatePinDots();}
+function updatePinDots(){
+  document.querySelectorAll('.pin-dot').forEach((dot,i)=>dot.classList.toggle('filled',i<_pinEntered.length));
+}
+function verifyPin(){
+  if(!_pinTarget)return;
+  if(_pinEntered===_pinTarget.pin){loginAs(_pinTarget.id,_pinTarget.name,_pinTarget.color,true);}
+  else{
+    const dots=document.getElementById('pin-dots');
+    dots.classList.add('shake');
+    document.getElementById('pin-error-msg').style.opacity='1';
+    setTimeout(()=>{dots.classList.remove('shake');_pinEntered='';updatePinDots();},500);
+  }
+}
+
+// ── ADMIN PROFILE MANAGEMENT ──
+async function renderAdminProfiles(){
+  const el=document.getElementById('admin-profiles-list');if(!el)return;
+  const{data:profiles}=await sb.from('liftplan_profiles').select('*').order('created_at');
+  el.innerHTML=(profiles||[]).map(p=>`
+    <div class="settings-row">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:30px;height:30px;border-radius:8px;background:${p.color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0">${p.name[0].toUpperCase()}</div>
+        <div style="font-size:15px;font-weight:500">${p.name}${p.is_admin?' 👑':''}</div>
+      </div>
+      ${!p.is_admin?`<button onclick="deleteProfile('${p.id}','${encodeURIComponent(p.name)}')" style="background:rgba(212,90,90,0.12);border:none;color:var(--red);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">🗑</button>`:'<div style="width:30px"></div>'}
+    </div>`).join('');
+}
+async function addProfile(){
+  const name=(document.getElementById('new-profile-name').value||'').trim();
+  if(!name)return showToast('Enter a name');
+  const{error}=await sb.from('liftplan_profiles').insert({name,color:_adminAddColor,is_admin:false});
+  if(error)return showToast('Error — try again');
+  document.getElementById('new-profile-name').value='';
+  renderAdminProfiles();showToast(`${name} added ✓`);
+}
+async function deleteProfile(id,encoded){
+  const name=decodeURIComponent(encoded);
+  if(!confirm(`Remove ${name}? Their workout data stays on their device.`))return;
+  await sb.from('liftplan_profiles').delete().eq('id',id);
+  renderAdminProfiles();showToast(`${name} removed`);
+}
+
+// ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-selectedWeek=weekNum(new Date())||1;
-initCalStart();
-renderCalendar();
-setupTabSwipe();
+initProfiles();
 </script>
 </body>
 </html>
