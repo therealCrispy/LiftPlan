@@ -280,7 +280,7 @@ html,body{height:100%;background:var(--bg);color:var(--t1);
 
 /* Weight/reps big inputs */
 #live-inputs{flex:1;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:0 20px}
+  align-items:center;justify-content:flex-start;padding:0 20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .live-field-block{width:100%;display:flex;flex-direction:column;align-items:center;
   padding:14px 0;border-bottom:1px solid var(--divider)}
 .live-field-block:last-child{border-bottom:none}
@@ -327,6 +327,17 @@ html,body{height:100%;background:var(--bg);color:var(--t1);
 #live-done-btn:active{transform:scale(0.96);background:var(--accent2)}
 #live-done-btn.all-done{background:var(--green)}
 
+/* ── CONFIRM MODAL ── */
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;
+  display:none;align-items:flex-end;justify-content:center;padding-bottom:calc(var(--safe-bot)+12px)}
+#confirm-overlay.show{display:flex}
+#confirm-sheet{background:var(--s1);border-radius:22px 22px 16px 16px;width:100%;max-width:480px;
+  padding:22px 20px 12px;display:flex;flex-direction:column;gap:10px}
+#confirm-msg{font-size:16px;font-weight:600;text-align:center;padding:4px 0 8px;color:var(--t1)}
+#confirm-ok{width:100%;padding:16px;border-radius:14px;background:var(--red);color:#fff;
+  border:none;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer}
+#confirm-cancel{width:100%;padding:14px;border-radius:14px;background:var(--s2);color:var(--t2);
+  border:none;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}
 /* ── LOG / PROGRESS / SETTINGS ── */
 .log-entry{background:var(--s1);border-radius:16px;margin:0 14px 8px;cursor:pointer;overflow:hidden}
 .log-entry-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 15px}
@@ -514,6 +525,15 @@ canvas.pr-chart{width:100%;height:80px;display:block}
     <div class="modal-handle"></div>
     <div class="modal-title" id="log-modal-title">Workout</div>
     <div class="modal-body" id="log-modal-body"></div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-overlay">
+  <div id="confirm-sheet">
+    <div id="confirm-msg"></div>
+    <button id="confirm-ok"></button>
+    <button id="confirm-cancel">Cancel</button>
   </div>
 </div>
 
@@ -1303,6 +1323,7 @@ function bzNext(){
     if(m?.e1rm)maxes[t.key]=m.e1rm;
   });
   lsSet('wbaseline',{date:new Date().toISOString(),maxes});
+  syncBaseline();
   closeBaseline();
   renderCalendar();
   showToast('Baseline saved — let\'s get to work! 💪');
@@ -1616,8 +1637,17 @@ function updateRestDisplay(){document.getElementById('rest-big-timer').textConte
 function skipRest(){stopRestTimer();renderLiveStep()}
 function addRestTime(s){_restSecs+=s;updateRestDisplay()}
 
+function appConfirm(msg,okLabel,onOk,danger=true){
+  document.getElementById('confirm-msg').textContent=msg;
+  const ok=document.getElementById('confirm-ok');
+  ok.textContent=okLabel;
+  ok.style.background=danger?'var(--red)':'var(--accent)';
+  document.getElementById('confirm-overlay').classList.add('show');
+  ok.onclick=()=>{document.getElementById('confirm-overlay').classList.remove('show');onOk();};
+  document.getElementById('confirm-cancel').onclick=()=>document.getElementById('confirm-overlay').classList.remove('show');
+}
 function confirmEnd(){
-  if(confirm('End workout? Completed sets will be saved.')){saveWorkout();closeLive();}
+  appConfirm('End workout? Completed sets will be saved.','End Workout',()=>{saveWorkout();closeLive();});
 }
 function finishWorkout(){saveWorkout();closeLive();showToast('Workout saved! 💪')}
 
@@ -1633,6 +1663,7 @@ function saveWorkout(){
     })).filter(e=>e.sets.length>0)
   };
   const logs=lsGet('wlogs',[]);logs.push(entry);lsSet('wlogs',logs);
+  syncLogs();
 }
 function closeLive(){
   if(_elapsedInt)clearInterval(_elapsedInt);
@@ -1688,9 +1719,10 @@ function renderLog(){
   }).join('');
 }
 function deleteLog(id){
-  if(!confirm('Delete this workout log?'))return;
-  lsSet('wlogs',lsGet('wlogs',[]).filter(l=>l.id!==id));
-  renderLog();renderCalendar();showToast('Workout deleted');
+  appConfirm('Delete this workout?','Delete',()=>{
+    lsSet('wlogs',lsGet('wlogs',[]).filter(l=>l.id!==id));
+    syncLogs();renderLog();renderCalendar();showToast('Workout deleted');
+  });
 }
 function openLog(id){
   const log=lsGet('wlogs',[]).find(l=>l.id===id);if(!log)return;
@@ -1881,30 +1913,33 @@ function renderSettings(){
     </div>`;
   if(p.is_admin)renderAdminProfiles();
 }
-function resetBaseline(){if(confirm('Re-test your baseline? This will open the wizard again.')){openBaseline();}}
+function resetBaseline(){appConfirm('Re-test your baseline? This will open the setup wizard again.','Re-test',()=>openBaseline());}
 function exportLogs(){
   const b=new Blob([JSON.stringify({baseline:lsGet('wbaseline',null),logs:lsGet('wlogs',[])},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='lift-data.json';a.click();
 }
 function deleteProgress(name){
-  if(!confirm(`Delete all logged data for ${name}?`))return;
-  const logs=lsGet('wlogs',[]).map(l=>({
-    ...l,exercises:(l.exercises||[]).filter(e=>e.name!==name)
-  })).filter(l=>(l.exercises||[]).length>0);
-  lsSet('wlogs',logs);renderProgress();showToast('Exercise data deleted');
+  appConfirm(`Delete all data for ${name}?`,'Delete',()=>{
+    const logs=lsGet('wlogs',[]).map(l=>({
+      ...l,exercises:(l.exercises||[]).filter(e=>e.name!==name)
+    })).filter(l=>(l.exercises||[]).length>0);
+    lsSet('wlogs',logs);syncLogs();renderProgress();showToast('Exercise data deleted');
+  });
 }
 function resetEverything(){
-  if(confirm('Reset everything? This clears your maxes and all logs — the app will return to the "Find Your Baseline" state.')){
+  appConfirm('Reset everything? Clears your maxes and all logs.','Reset',()=>{
     lsClear('wbaseline');lsClear('wlogs');
+    syncBaseline();syncLogs();
     renderCalendar();renderSettings();renderLog();renderProgress();showToast('Reset complete');
     showSection('sec-calendar');
-  }
+  });
 }
 function clearAll(){
-  if(confirm('Clear ALL data including baseline and logs? Cannot be undone.')){
+  appConfirm('Clear ALL data? Cannot be undone.','Clear All',()=>{
     lsClear('wbaseline');lsClear('wlogs');
+    syncBaseline();syncLogs();
     renderCalendar();renderSettings();showToast('All data cleared');
-  }
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1997,12 +2032,41 @@ function selectProfile(id,encodedName,color,isAdmin,pin){
   else{loginAs(id,name,color,false);}
 }
 
-function loginAs(id,name,color,isAdmin){
+async function syncDown(){
+  if(!sb||!currentProfile)return;
+  const pid=currentProfile.id;
+  try{
+    const[blRes,logsRes]=await Promise.all([
+      sb.from('liftplan_baselines').select('data').eq('profile_id',pid).single(),
+      sb.from('liftplan_logs').select('data').eq('profile_id',pid).order('logged_at')
+    ]);
+    if(blRes.data?.data)lsSet('wbaseline',blRes.data.data);
+    if(logsRes.data)lsSet('wlogs',logsRes.data.map(r=>r.data));
+  }catch(e){}
+}
+async function syncBaseline(){
+  if(!sb||!currentProfile)return;
+  const pid=currentProfile.id,bl=lsGet('wbaseline',null);
+  try{
+    if(bl)await sb.from('liftplan_baselines').upsert({profile_id:pid,data:bl,updated_at:new Date().toISOString()},{onConflict:'profile_id'});
+    else await sb.from('liftplan_baselines').delete().eq('profile_id',pid);
+  }catch(e){}
+}
+async function syncLogs(){
+  if(!sb||!currentProfile)return;
+  const pid=currentProfile.id,logs=lsGet('wlogs',[]);
+  try{
+    await sb.from('liftplan_logs').delete().eq('profile_id',pid);
+    if(logs.length)await sb.from('liftplan_logs').insert(logs.map(l=>({profile_id:pid,data:l,logged_at:new Date(l.date||Date.now()).toISOString()})));
+  }catch(e){}
+}
+async function loginAs(id,name,color,isAdmin){
   localStorage.setItem('lp_pid',id);localStorage.setItem('lp_name',name);
   localStorage.setItem('lp_color',color);localStorage.setItem('lp_admin',isAdmin?'1':'0');
   currentProfile={id,name,color,is_admin:isAdmin};
   document.getElementById('profile-screen').style.display='none';
   document.getElementById('pin-overlay').style.display='none';
+  await syncDown();
   startApp();
 }
 
@@ -2077,9 +2141,10 @@ async function addProfile(){
 }
 async function deleteProfile(id,encoded){
   const name=decodeURIComponent(encoded);
-  if(!confirm(`Remove ${name}? Their workout data stays on their device.`))return;
-  await sb.from('liftplan_profiles').delete().eq('id',id);
-  renderAdminProfiles();showToast(`${name} removed`);
+  appConfirm(`Remove ${name}?`,'Remove',async()=>{
+    await sb.from('liftplan_profiles').delete().eq('id',id);
+    renderAdminProfiles();showToast(`${name} removed`);
+  });
 }
 
 // ══════════════════════════════════════════════════════
