@@ -295,6 +295,12 @@ html,body{height:100%;background:var(--bg);color:var(--t1);
 .live-suggest b{color:var(--accent)}
 .live-suggest .src-tag{font-size:10px;background:rgba(201,100,66,0.12);
   color:var(--accent);padding:2px 6px;border-radius:10px;margin-left:4px;font-weight:700}
+.pct-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
+  font-size:12px;font-weight:800;letter-spacing:0.04em;margin-bottom:4px}
+.pct-badge.heavy{background:rgba(201,100,66,0.18);color:var(--accent)}
+.pct-badge.medium{background:rgba(201,164,66,0.18);color:var(--yellow)}
+.pct-badge.light{background:rgba(58,158,110,0.18);color:var(--green)}
+.pct-badge.drop-part{background:rgba(90,149,255,0.15);color:var(--blue)}
 .live-nudge-row{display:flex;margin-top:10px;width:100%;gap:6px}
 .live-nudge{flex:1;padding:16px 0;
   background:var(--s2);color:var(--t1);font-size:18px;font-weight:700;
@@ -594,7 +600,7 @@ canvas.pr-chart{width:100%;height:80px;display:block}
 </nav>
 
 <div id="toast"></div>
-<div id="version-corner" style="position:fixed;bottom:calc(var(--tab) + var(--safe-bot) + 6px);left:10px;font-size:10px;color:var(--t4);z-index:99;pointer-events:none;letter-spacing:0.03em">v1.2.1</div>
+<div id="version-corner" style="position:fixed;bottom:calc(var(--tab) + var(--safe-bot) + 6px);left:10px;font-size:10px;color:var(--t4);z-index:99;pointer-events:none;letter-spacing:0.03em">v1.3.1</div>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -1457,10 +1463,17 @@ function renderLiveStep(){
     `Exercise ${exIdx+1}/${exercises.length} · Set ${setIdx+1}/${totalSets}`;
   document.getElementById('live-ex-name').textContent=ex.n;
   const repTarget=isBackoff&&ex.bo?ex.bo.reps:ex.reps;
-  const setLbl=isBackoff?`Backoff set · Target: ${repTarget}`:
-    `Set ${setIdx+1} of ${totalSets} · Target: ${repTarget}${ex.drop&&setIdx===totalSets-1?' + dropset':''}`;
-  document.getElementById('live-set-label').textContent=
-    setLbl+(ex.ss?` · SS w/ ${ex.ss}`:'');
+  const isDropSet=ex.drop&&setIdx===totalSets-1;
+  const thisPct=Math.round(repsToPct(repTarget)*100);
+  const dropPct=isDropSet?Math.round(thisPct*0.5):null;
+  const badgeCls=thisPct>=87?'heavy':thisPct>=77?'medium':'light';
+  const pctHTML=isDropSet
+    ?`<span class="pct-badge ${badgeCls}">${thisPct}%</span><span class="pct-badge drop-part" style="margin-left:4px">&#8594; drop ${dropPct}%</span>`
+    :`<span class="pct-badge ${badgeCls}">${thisPct}% of 1RM</span>`;
+  const setLblText=isBackoff?`Backoff set &middot; ${repTarget} reps`
+    :`Set ${setIdx+1} of ${totalSets} &middot; ${repTarget} reps${ex.ss?` &middot; SS w/ ${ex.ss}`:''}`;
+  document.getElementById('live-set-label').innerHTML=
+    `<div style="margin-bottom:4px">${pctHTML}</div>${setLblText}`;
   const {weight:sugW,label:sugLbl,src}=suggestWeight(ex.n,repTarget,ex.heavy&&!isBackoff);
   const wInp=document.getElementById('live-weight');
   const rInp=document.getElementById('live-reps');
@@ -1469,8 +1482,12 @@ function renderLiveStep(){
   if(state.reps)rInp.value=state.reps;else rInp.value='';
   const srcTag=src==='baseline'?'<span class="src-tag">BASELINE</span>':
                 src==='log'?'<span class="src-tag">LOG</span>':'';
-  document.getElementById('weight-suggest').innerHTML=
-    sugLbl?`<b>${sugLbl}</b>${srcTag}`:'';
+  let sugHTML=sugLbl?`<b>${sugLbl}</b>${srcTag}`:'';
+  if(isDropSet&&sugW){
+    const dropW=Math.round(sugW*0.5/2.5)*2.5;
+    sugHTML+=` <span style="color:var(--blue)">&#8594; drop <b>${dropW}lb</b></span>`;
+  }
+  document.getElementById('weight-suggest').innerHTML=sugHTML;
   document.getElementById('reps-suggest').innerHTML=
     repTarget?`Target: <b>${repTarget} reps</b>`:'';
   renderPlates(state.weight||sugW||0);
@@ -1907,7 +1924,7 @@ function renderSettings(){
         </div>
         <div class="settings-row">
           <div class="settings-row-label">Version</div>
-          <div id="version-badge" class="settings-row-val">v1.2.1</div>
+          <div id="version-badge" class="settings-row-val">v1.3.1</div>
         </div>
       </div>
     </div>`;
