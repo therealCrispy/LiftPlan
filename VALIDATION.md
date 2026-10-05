@@ -25,6 +25,6 @@ Tested through the connected Brave browser with disposable, locally isolated pre
 
 ## Remaining acceptance checks
 
-The new SQL schema and authenticated cloud sync have not been applied or tested against the live Supabase project. Sync tests use a simulated server and real IndexedDB API emulation. Authentication confirmation, server-side account isolation, cross-phone syncing, and production `/LiftPlan/` publishing must be verified during deployment.
+During the approved deployment, the new SQL schema was applied. A transaction with temporary account fixtures verified first save, idempotent retry, revision updates, stale-revision rejection, cross-account read/write isolation, and blocked anonymous table/function access. All fixtures were rolled back. Sync tests use a simulated server and real IndexedDB API emulation. Email confirmation and cross-phone syncing still require the shared account and physical devices.
 
 No physical iPhone or Safari test has been performed. Desktop viewport checks cannot establish iOS safe-area, keyboard, standalone installation, background wake/sound, or storage-eviction behavior. Follow DEPLOYMENT.md for those checks.

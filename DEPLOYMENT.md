@@ -8,7 +8,7 @@ This change is prepared on a separate branch. The live GitHub Pages app, existin
 
 1. Review `database/001-secure-sync.sql`. It adds `liftplan_v2_records`, restricted by Supabase Auth account ID, and an authenticated save function with revision checks. It does not migrate or delete old rows.
 2. Apply that file in the matching Supabase project's SQL editor. The project must be active and reachable.
-3. Verify email/password authentication is enabled. Set the Site URL to `https://therealcrispy.github.io/LiftPlan/` and allow that confirmation redirect if email confirmation is enabled. Do not disable confirmation solely to work around setup. Create the shared account through the app and complete any confirmation personally.
+3. Verify email/password authentication is enabled. Add `https://therealcrispy.github.io/LiftPlan/` to Redirect URLs if email confirmation is enabled. Signup explicitly requests this address, so the shared project’s default Site URL can stay unchanged. Do not disable confirmation solely to work around setup. Create the shared account through the app and complete any confirmation personally.
 4. Review and apply `database/002-lock-legacy-api.sql` to remove the old anonymous/authenticated public table access. This makes the old v1 app stop loading its profiles, so coordinate this with merging the new version. Old rows remain available in the dashboard. The unrelated meal-planning table is untouched.
 5. Merge the reviewed pull request. GitHub Pages should publish the new relative-path app files. Confirm the deployment succeeded and open the actual Pages address.
 6. On the two iPhones, sign into the same new account, select separate profiles, set Week 1's Monday, then install from Safari.

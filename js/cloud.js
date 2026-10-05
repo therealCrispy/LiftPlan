@@ -15,7 +15,7 @@ export class Auth {
  session(){try{return JSON.parse(localStorage.getItem(SESSION_KEY));}catch{return null;}}
  remember(data){const value={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+data.expires_in,user:{id:data.user.id,email:data.user.email}};localStorage.setItem(SESSION_KEY,JSON.stringify(value));return value;}
  async signIn(email,password){return this.remember(await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}}));}
- async signUp(email,password){const data=await request('/auth/v1/signup',{method:'POST',body:{email,password}});return data.access_token?this.remember(data):null;}
+ async signUp(email,password){const data=await request('/auth/v1/signup?redirect_to='+encodeURIComponent(CONFIG.siteUrl),{method:'POST',body:{email,password}});return data.access_token?this.remember(data):null;}
  async token(){
   const session=this.session();if(!session)throw new ApiError('Sign in again to sync. Your local workouts are still saved.',401,'session_missing');
   if(session.expires_at>Math.floor(Date.now()/1000)+60)return session.access_token;
