@@ -1,6 +1,6 @@
-const CACHE='liftplan-shell-v2-6';
+const CACHE='liftplan-shell-v2-7';
 const BASE=new URL('./',self.location.href);
-const FILES=['./','index.html','styles.css','manifest.webmanifest','js/app.js','js/core.js','js/program.js','js/config.js','js/store.js','js/cloud.js','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'].map(p=>new URL(p,BASE).href);
+const FILES=['./','index.html','styles.css','manifest.webmanifest','js/app.js','js/core.js','js/program.js','js/config.js','js/store.js','js/cloud.js','icons/icon.svg','icons/logo.svg','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'].map(p=>new URL(p,BASE).href);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const name of await caches.keys())if(name.startsWith('liftplan-shell-')&&name!==CACHE)await caches.delete(name);await self.clients.claim();})()));
 self.addEventListener('message',event=>{if(event.data?.type==='ACTIVATE_UPDATE')self.skipWaiting();});
