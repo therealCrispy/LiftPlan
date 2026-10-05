@@ -1,4 +1,4 @@
-const CACHE='liftplan-shell-v2-7';
+const CACHE='liftplan-shell-v2-8';
 const BASE=new URL('./',self.location.href);
 const FILES=['./','index.html','styles.css','manifest.webmanifest','js/app.js','js/core.js','js/program.js','js/config.js','js/store.js','js/cloud.js','icons/icon.svg','icons/logo.svg','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'].map(p=>new URL(p,BASE).href);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
